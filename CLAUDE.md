@@ -67,5 +67,6 @@ pnpm typecheck     # TypeScript check
 ## Research References
 
 Full verified research (30+ sources, 2 clean-room verifications):
+
 - `~/ai/websearch/archive/2026-03/2026-03-15_visual-branch-comparator-landscape.md`
 - `~/ai/websearch/archive/2026-03/2026-03-15_visual-branch-comparator-mvp-deep-dive.md`

@@ -1,0 +1,8 @@
+{
+  "name": "nextjs",
+  "buildCommand": "pnpm build",
+  "startCommand": "pnpm start",
+  "devCommand": "pnpm dev",
+  "healthCheckPath": "/",
+  "defaultPort": 3000
+}

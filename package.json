@@ -1,0 +1,35 @@
+{
+  "name": "visual-branch-comparator",
+  "version": "0.1.0",
+  "private": false,
+  "bin": {
+    "vbc": "./bin/vbc.js"
+  },
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "simple-git": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "eslint-config-prettier": "latest",
+    "prettier": "latest",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

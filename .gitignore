@@ -1,3 +1,6 @@
+# Override global gitignore for our CLI
+!bin/
+
 # Dependencies
 node_modules/
 .pnpm-store/
