@@ -6,8 +6,17 @@ A local web tool for visually comparing how a web app looks across different git
 
 ## Status
 
-**Phase**: Brainstorming → Spec finalization → Implementation
-**Spec**: `docs/SPEC.md` (DRAFT — needs finalization)
+**Phase**: Implementation (MVP)
+**Repo**: https://github.com/Crissorl/visual-branch-comparator
+**Spec**: `docs/SPEC.md`
+**Design**: `docs/superpowers/specs/2026-03-15-visual-branch-comparator-design.md`
+
+## GitHub Issues
+
+- Backlog tracked in GitHub Issues with milestones: MVP (Phase 1), V2 (Phase 2), V3 (Phase 3)
+- Labels: `feature`, `infra`, `bug`, `docs`, `design`
+- One issue per feature from spec (F1-F10) + infra + docs
+- Branch naming: `dev` for active work, PRs to `main`
 
 ## Tech Stack
 
