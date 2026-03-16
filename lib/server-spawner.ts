@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
-import { writeFile, readFile } from 'node:fs/promises';
+import { writeFile, readFile, copyFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { Source } from './worktree-manager';
 import { readState, writeState, ensureComparatorDir } from './state-store';
@@ -114,6 +114,21 @@ export async function startServer(source: Source): Promise<void> {
         logLines.push(
           `VBC: Failed to patch next.config: ${patchError instanceof Error ? patchError.message : String(patchError)}`,
         );
+      }
+
+      // Copy .env files from target repo to worktree (git worktree doesn't copy gitignored files)
+      try {
+        const targetRepo = getTargetRepo();
+        const entries = await readdir(targetRepo);
+        const envFiles = entries.filter((f) => f.startsWith('.env'));
+        for (const envFile of envFiles) {
+          await copyFile(path.join(targetRepo, envFile), path.join(source.worktreePath, envFile));
+        }
+        if (envFiles.length > 0) {
+          logLines.push(`VBC: Copied ${envFiles.length} .env file(s) to worktree`);
+        }
+      } catch {
+        logLines.push('VBC: Could not copy .env files (non-fatal)');
       }
 
       // Install dependencies
