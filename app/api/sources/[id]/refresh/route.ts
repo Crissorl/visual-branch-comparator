@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getSource, removeSource, addSource } from '@/lib/worktree-manager';
+import { startServer } from '@/lib/server-spawner';
 
 export async function POST(
   _request: NextRequest,
@@ -14,5 +15,6 @@ export async function POST(
 
   await removeSource(id);
   const source = await addSource(existing.branch, existing.commit);
+  void startServer(source);
   return NextResponse.json(source);
 }

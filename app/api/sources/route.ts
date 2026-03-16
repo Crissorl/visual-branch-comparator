@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { listSources, addSource } from '@/lib/worktree-manager';
+import { startServer } from '@/lib/server-spawner';
 import { WorktreeError } from '@/lib/worktree-errors';
 
 export async function GET(): Promise<NextResponse> {
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const source = await addSource(branch.trim(), commit);
+    void startServer(source);
     return NextResponse.json(source, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof WorktreeError) {

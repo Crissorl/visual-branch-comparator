@@ -1,8 +1,8 @@
 {
   "name": "nextjs",
-  "buildCommand": "pnpm build",
-  "startCommand": "pnpm start",
-  "devCommand": "pnpm dev",
+  "install": "pnpm install",
+  "build": "pnpm build",
+  "start": "pnpm start",
   "healthCheckPath": "/",
-  "defaultPort": 3000
+  "env": { "NEXT_TELEMETRY_DISABLED": "1" }
 }
