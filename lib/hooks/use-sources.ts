@@ -45,8 +45,10 @@ async function fetchAndUpdate(): Promise<void> {
   }
 }
 
-// Module-level initial fetch — runs once when module is imported
-void fetchAndUpdate();
+// Module-level initial fetch — runs once when module is imported (client-side only)
+if (typeof window !== 'undefined') {
+  void fetchAndUpdate();
+}
 
 export function useSources(): UseSources {
   const sources = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
