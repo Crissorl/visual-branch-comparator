@@ -1,12 +1,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { NAV_SYNC_SCRIPT } from './nav-sync-script';
 
 const IFRAME_HEADERS_MARKER = 'X-Frame-Options';
-
-const NAV_SYNC_SCRIPT_PLACEHOLDER = `
-// VBC Nav Sync - placeholder, will be replaced in issue #8
-console.log('[VBC] Nav sync script placeholder');
-`;
 
 export function patchIframeHeaders(worktreePath: string): void {
   const configNames = ['next.config.ts', 'next.config.mjs', 'next.config.js'];
@@ -101,7 +97,7 @@ export function injectNavSyncScript(worktreePath: string): void {
   return (
     <html lang="en">
       <head>
-        <script dangerouslySetInnerHTML={{ __html: \`${NAV_SYNC_SCRIPT_PLACEHOLDER}\` }} />
+        <script dangerouslySetInnerHTML={{ __html: \`${NAV_SYNC_SCRIPT}\` }} />
       </head>
       <body>{children}</body>
     </html>
@@ -120,7 +116,7 @@ export function injectNavSyncScript(worktreePath: string): void {
     return;
   }
 
-  const scriptTag = `<script dangerouslySetInnerHTML={{ __html: \`${NAV_SYNC_SCRIPT_PLACEHOLDER}\` }} />`;
+  const scriptTag = `<script dangerouslySetInnerHTML={{ __html: \`${NAV_SYNC_SCRIPT}\` }} />`;
 
   let patched: string;
   if (content.includes('<head>') || content.includes('<head ')) {
