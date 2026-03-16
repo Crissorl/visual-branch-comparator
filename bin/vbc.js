@@ -90,7 +90,8 @@ function openBrowser(url) {
   });
 }
 
-const child = spawn('node', ['node_modules/.bin/next', 'start', '-p', String(port)], {
+const nextBin = path.join(packageDir, 'node_modules', 'next', 'dist', 'bin', 'next');
+const child = spawn(process.execPath, [nextBin, 'start', '-p', String(port)], {
   cwd: packageDir,
   stdio: 'inherit',
   env: { ...process.env, VBC_TARGET_REPO: cwd },
