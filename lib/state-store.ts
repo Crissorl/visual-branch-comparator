@@ -1,4 +1,5 @@
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import type { Source } from './worktree-manager';
 import { WorktreeError } from './worktree-errors';
@@ -8,6 +9,7 @@ const COMPARATOR_DIR = '.comparator';
 const STATE_FILE = 'state.json';
 
 let cache: Record<string, Source> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
 
 export async function ensureComparatorDir(): Promise<void> {
   const base = path.join(getTargetRepo(), COMPARATOR_DIR);
@@ -39,12 +41,16 @@ export async function readState(): Promise<Record<string, Source>> {
 }
 
 export async function writeState(state: Record<string, Source>): Promise<void> {
-  await ensureComparatorDir();
-  const filePath = path.join(getTargetRepo(), COMPARATOR_DIR, STATE_FILE);
-  const tmpPath = filePath + '.tmp';
-  await writeFile(tmpPath, JSON.stringify(state, null, 2), 'utf-8');
-  await rename(tmpPath, filePath);
-  cache = state;
+  const doWrite = async (): Promise<void> => {
+    await ensureComparatorDir();
+    const filePath = path.join(getTargetRepo(), COMPARATOR_DIR, STATE_FILE);
+    const tmpPath = filePath + '.' + crypto.randomUUID().slice(0, 8) + '.tmp';
+    await writeFile(tmpPath, JSON.stringify(state, null, 2), 'utf-8');
+    await rename(tmpPath, filePath);
+    cache = state;
+  };
+  writeQueue = writeQueue.catch(() => {}).then(doWrite);
+  await writeQueue;
 }
 
 export function invalidateCache(): void {
