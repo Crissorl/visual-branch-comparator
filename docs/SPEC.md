@@ -1,6 +1,6 @@
 # Visual Branch Comparator — Specification
 
-> **Status**: DRAFT — needs brainstorming finalization before implementation
+> **Status**: Finalized — MVP implementation complete
 > **Date**: 2026-03-15
 > **Author**: KO (AI Overseer) + Claude (Research)
 
@@ -281,14 +281,21 @@ This is only needed for development — the comparator injects this config autom
 | Package manager    | pnpm                             | 9.x     |
 | Language           | TypeScript                       | 5.x     |
 
-## 12. Open Questions (To Resolve in Brainstorming)
+## 12. Design Decisions Finalized (MVP Implementation)
 
-- [ ] **Comparator as standalone CLI or npm package?** How does user start it? `npx visual-branch-comparator`? Global install? Script in project?
-- [ ] **Where do worktrees live?** Adjacent to project (`../project-branches/`) or in temp dir?
-- [ ] **UI design**: Minimal dashboard or more polished? Dark mode? Responsive?
-- [ ] **Navigation sync**: How to sync URL between iframes? postMessage? URL bar in comparator?
-- [ ] **Multiple projects**: Can the comparator manage multiple repos or is it one-repo-at-a-time?
-- [ ] **Vercel integration**: Worth building cloud mode (Vercel preview URLs) in addition to local mode?
+The following decisions were validated during implementation and documented in detail in [`docs/superpowers/specs/2026-03-15-visual-branch-comparator-design.md`](docs/superpowers/specs/2026-03-15-visual-branch-comparator-design.md):
+
+- **Comparator delivery**: Standalone CLI (`pnpm dev` for development, `pnpm build && pnpm start` for production). Auto-opens browser on startup.
+- **Worktree location**: `~/.visual-branch-comparator/worktrees/` with state persistence in `~/.visual-branch-comparator/state.json`
+- **UI design**: Minimal, functional dashboard with dark/light mode toggle (system preference detection with manual override). Responsive grid layout.
+- **Navigation sync**: postMessage-based architecture with injected script hooks for `pushState`, `replaceState`, and `popstate` events. Synchronized iframe navigation.
+- **Config patching**: Robust detection supporting CJS (`next.config.js`), ESM (`next.config.mjs`), and TypeScript (`next.config.ts`) with automated iframe header injection.
+- **Screenshot engine**: Playwright with optional dependency pattern (graceful degradation if not installed).
+- **Diff engine**: pixelmatch with automatic size mismatch padding before comparison.
+- **AI descriptions**: Claude Haiku via `@anthropic-ai/sdk` with graceful fallback to pixel stats when API key unavailable.
+- **Process lifecycle**: Graceful shutdown via SIGTERM with 5-second timeout before SIGKILL. Crash recovery on startup with health checks.
+- **Multiple projects**: One-repo-at-a-time design (MVP). Multi-repo support deferred to V3.
+- **Vercel integration**: Not included in MVP. Local build-mode only. Cloud integration deferred to V3.
 
 ---
 
@@ -298,6 +305,7 @@ Full research archives with 30+ verified sources:
 
 - **Landscape Scan**: `~/ai/websearch/archive/2026-03/2026-03-15_visual-branch-comparator-landscape.md`
 - **MVP Deep-Dive**: `~/ai/websearch/archive/2026-03/2026-03-15_visual-branch-comparator-mvp-deep-dive.md`
+- **Design Document**: `docs/superpowers/specs/2026-03-15-visual-branch-comparator-design.md`
 
 Key verified facts:
 

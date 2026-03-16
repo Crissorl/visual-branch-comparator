@@ -6,7 +6,7 @@ A local web tool for visually comparing how a web app looks across different git
 
 ## Status
 
-**Phase**: Implementation (MVP)
+**Phase**: MVP Complete
 **Repo**: https://github.com/Crissorl/visual-branch-comparator
 **Spec**: `docs/SPEC.md`
 **Design**: `docs/superpowers/specs/2026-03-15-visual-branch-comparator-design.md`
