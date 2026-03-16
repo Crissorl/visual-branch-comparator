@@ -1,12 +1,5 @@
-import SourceSelector from '@/components/SourceSelector';
-import StatusBar from '@/components/StatusBar';
+import { redirect } from 'next/navigation';
 
-export default function Dashboard() {
-  return (
-    <main>
-      <h1>Visual Branch Comparator</h1>
-      <StatusBar />
-      <SourceSelector />
-    </main>
-  );
+export default function Home() {
+  redirect('/compare');
 }

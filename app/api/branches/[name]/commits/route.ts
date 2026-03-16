@@ -8,6 +8,6 @@ export async function GET(
   const { name } = await params;
   const decodedName = decodeURIComponent(name);
   const git = simpleGit();
-  const log = await git.log({ from: decodedName, maxCount: 20 });
+  const log = await git.log({ from: decodedName, maxCount: 50 });
   return NextResponse.json({ commits: log.all });
 }
