@@ -1,9 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
-import { writeFile, readFile, access } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Source } from './worktree-manager';
 import { readState, writeState, ensureComparatorDir } from './state-store';
+import { patchIframeHeaders } from './config-patcher';
 
 interface FrameworkConfig {
   name: string;
@@ -84,69 +85,6 @@ async function writeLog(sourceId: string, lines: string[]): Promise<void> {
   await writeFile(logPath, lines.join('\n'), 'utf-8');
 }
 
-const NEXT_CONFIG_EXTENSIONS = ['ts', 'mjs', 'js'];
-
-async function patchNextConfig(worktreePath: string): Promise<void> {
-  try {
-    let configPath: string | null = null;
-
-    for (const ext of NEXT_CONFIG_EXTENSIONS) {
-      const candidate = path.join(worktreePath, `next.config.${ext}`);
-      try {
-        await access(candidate);
-        configPath = candidate;
-        break;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!configPath) return;
-
-    const content = await readFile(configPath, 'utf-8');
-
-    if (content.includes('X-Frame-Options')) return;
-
-    const headersSnippet = `
-// VBC: iframe embedding headers
-const vbcHeaders = [
-  { source: '/:path*', headers: [
-    { key: 'X-Frame-Options', value: 'ALLOWALL' },
-    { key: 'Content-Security-Policy', value: "frame-ancestors 'self' http://localhost:*" },
-  ]},
-];
-`;
-
-    // Find the config object and inject headers() method
-    const configRegex = /(const\s+nextConfig\s*(?::\s*\w+\s*)?=\s*\{)/;
-    const match = content.match(configRegex);
-
-    if (match && match.index !== undefined) {
-      const insertPos = match.index + match[0].length;
-      const patched =
-        headersSnippet +
-        content.slice(0, insertPos) +
-        '\n  async headers() { return vbcHeaders; },' +
-        content.slice(insertPos);
-      await writeFile(configPath, patched, 'utf-8');
-    } else {
-      // Fallback: append headers export before default export
-      const exportRegex = /(export\s+default)/;
-      const exportMatch = content.match(exportRegex);
-      if (exportMatch && exportMatch.index !== undefined) {
-        const patched =
-          content.slice(0, exportMatch.index) + headersSnippet + content.slice(exportMatch.index);
-        await writeFile(configPath, patched, 'utf-8');
-      }
-    }
-  } catch (error: unknown) {
-    console.warn(
-      'VBC: Failed to patch next.config:',
-      error instanceof Error ? error.message : error,
-    );
-  }
-}
-
 async function updateSourceState(sourceId: string, updates: Partial<Source>): Promise<void> {
   const state = await readState();
   if (state[sourceId]) {
@@ -169,7 +107,14 @@ export async function startServer(source: Source): Promise<void> {
 
     try {
       // Non-fatal config patching
-      await patchNextConfig(source.worktreePath);
+      try {
+        patchIframeHeaders(source.worktreePath);
+      } catch (patchError: unknown) {
+        console.warn(
+          'VBC: Failed to patch next.config:',
+          patchError instanceof Error ? patchError.message : patchError,
+        );
+      }
 
       // Install dependencies
       const installCode = await spawnCommand(config.install, source.worktreePath, env, logLines);
@@ -298,6 +243,12 @@ export async function healthCheck(
   }
 
   return false;
+}
+
+export async function stopAllServers(): Promise<void> {
+  const state = await readState();
+  const runningOrBuilding = Object.values(state).filter((s) => s.pid);
+  await Promise.allSettled(runningOrBuilding.map((source) => stopServer(source)));
 }
 
 export async function stopServer(source: Source): Promise<void> {

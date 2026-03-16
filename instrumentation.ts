@@ -1,6 +1,7 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { cleanupStaleEntries } = await import('./lib/worktree-manager');
-    await cleanupStaleEntries();
+    const { recoverFromCrash, registerShutdownHandlers } = await import('./lib/lifecycle');
+    await recoverFromCrash();
+    registerShutdownHandlers();
   }
 }
