@@ -10,11 +10,13 @@ import IframePanel from '@/components/IframePanel';
 import StatusBar from '@/components/StatusBar';
 import BuildLog from '@/components/BuildLog';
 import DiffOverlay from '@/components/DiffOverlay';
+import ChangePanel from '@/components/ChangePanel';
 
 export default function ComparePage() {
   const { sources, addSource, removeSource, refreshSource } = useSources();
   const [showLogFor, setShowLogFor] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
+  const [showChanges, setShowChanges] = useState(false);
 
   const sourceA = sources[0] ?? null;
   const sourceB = sources[1] ?? null;
@@ -53,12 +55,20 @@ export default function ComparePage() {
         <div className="flex items-center gap-3">
           <NavSyncToggle enabled={syncEnabled} onToggle={setSyncEnabled} />
           {sourceA?.status === 'running' && sourceB?.status === 'running' && (
-            <button
-              onClick={() => setShowDiff(true)}
-              className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Show Diff
-            </button>
+            <>
+              <button
+                onClick={() => setShowDiff(true)}
+                className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Show Diff
+              </button>
+              <button
+                onClick={() => setShowChanges(true)}
+                className="rounded bg-neutral-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+              >
+                Changes
+              </button>
+            </>
           )}
           <ThemeToggle />
         </div>
@@ -118,6 +128,15 @@ export default function ComparePage() {
           sourceBId={sourceB.id}
           visible={showDiff}
           onClose={() => setShowDiff(false)}
+        />
+      )}
+
+      {sourceA && sourceB && (
+        <ChangePanel
+          sourceAId={sourceA.id}
+          sourceBId={sourceB.id}
+          visible={showChanges}
+          onClose={() => setShowChanges(false)}
         />
       )}
     </main>
