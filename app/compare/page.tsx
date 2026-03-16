@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSources } from '@/lib/hooks/use-sources';
+import ThemeToggle from '@/components/ThemeToggle';
 import SourceSelector from '@/components/SourceSelector';
 import IframePanel from '@/components/IframePanel';
 import StatusBar from '@/components/StatusBar';
@@ -16,9 +17,10 @@ export default function ComparePage() {
   const logSource = showLogFor ? sources.find((s) => s.id === showLogFor) : null;
 
   return (
-    <main className="flex h-screen flex-col bg-neutral-950 text-white">
-      <header className="flex items-center justify-between border-b border-neutral-800 px-6 py-3">
+    <main className="flex h-screen flex-col bg-white text-neutral-900 dark:bg-neutral-950 dark:text-white">
+      <header className="flex items-center justify-between border-b border-neutral-300 px-6 py-3 dark:border-neutral-800">
         <h1 className="text-lg font-semibold">Visual Branch Comparator</h1>
+        <ThemeToggle />
       </header>
 
       <div className="grid grid-cols-2 gap-4 px-6 py-4">
