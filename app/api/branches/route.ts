@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import simpleGit from 'simple-git';
+import { getTargetRepo } from '@/lib/target-repo';
 
 interface BranchInfo {
   name: string;
@@ -8,7 +9,7 @@ interface BranchInfo {
 }
 
 export async function GET(): Promise<NextResponse> {
-  const git = simpleGit();
+  const git = simpleGit(getTargetRepo());
   const result = await git.branch();
   const branchNames = Object.keys(result.branches);
 

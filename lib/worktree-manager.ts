@@ -11,6 +11,7 @@ export interface Source {
   id: string;
   branch: string;
   commit?: string;
+  mode: 'build' | 'dev';
   worktreePath: string;
   port: number;
   status: 'building' | 'running' | 'error' | 'stopped';
@@ -23,7 +24,11 @@ function sanitizeBranchName(branch: string): string {
   return branch.replace(/\//g, '__');
 }
 
-export async function addSource(branch: string, commit?: string): Promise<Source> {
+export async function addSource(
+  branch: string,
+  commit?: string,
+  mode: 'build' | 'dev' = 'build',
+): Promise<Source> {
   const git = simpleGit(getTargetRepo());
   const branches = await git.branch();
 
@@ -54,6 +59,9 @@ export async function addSource(branch: string, commit?: string): Promise<Source
 
   await ensureComparatorDir();
 
+  // Prune stale worktree registrations (e.g. after rm -rf .comparator)
+  await git.raw('worktree', 'prune');
+
   try {
     if (commit) {
       await git.raw('worktree', 'add', '--detach', worktreePath, commit);
@@ -69,6 +77,7 @@ export async function addSource(branch: string, commit?: string): Promise<Source
     id,
     branch,
     ...(commit !== undefined ? { commit } : {}),
+    mode,
     worktreePath,
     port,
     status: 'stopped',

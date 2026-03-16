@@ -6,7 +6,8 @@ import type { Source } from '@/lib/worktree-manager';
 interface UseSources {
   sources: Source[];
   isPolling: boolean;
-  addSource: (branch: string, commit?: string) => Promise<void>;
+  addSource: (branch: string, commit?: string, mode?: 'build' | 'dev') => Promise<void>;
+  stopSource: (id: string) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   refreshSource: (id: string) => Promise<void>;
 }
@@ -58,14 +59,16 @@ export function useSources(): UseSources {
     return sources.some((s) => s.status === 'building');
   }, [sources]);
 
-  // Poll every 2s while any source is building
+  // Poll every 2s while building, every 10s while running (detect crashes)
   useEffect(() => {
     const hasBuilding = sources.some((s) => s.status === 'building');
+    const hasAny = sources.length > 0;
+    const interval = hasBuilding ? 2000 : hasAny ? 10000 : 0;
 
-    if (hasBuilding) {
+    if (interval > 0) {
       intervalRef.current = setInterval(() => {
         void fetchAndUpdate();
-      }, 2000);
+      }, interval);
     }
 
     return () => {
@@ -76,20 +79,34 @@ export function useSources(): UseSources {
     };
   }, [sources]);
 
-  const addSource = useCallback(async (branch: string, commit?: string) => {
+  const addSource = useCallback(async (branch: string, commit?: string, mode?: 'build' | 'dev') => {
+    console.log('[API] useSources.ADD_START: branch=%s, commit=%s, mode=%s', branch, commit, mode);
     try {
+      const body = JSON.stringify({ branch, commit, mode });
+      console.log('[API] useSources.ADD_BODY: %s', body);
       const res = await fetch('/api/sources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branch, commit }),
+        body,
       });
+      console.log('[API] useSources.ADD_RESPONSE: status=%d, ok=%s', res.status, res.ok);
       if (!res.ok) {
         const err = await res.json();
-        console.error('Failed to add source:', err);
+        console.error('[ERROR] useSources.ADD_FAILED:', err);
       }
       await fetchAndUpdate();
+      console.log('[API] useSources.ADD_DONE: sources updated');
     } catch (error: unknown) {
-      console.error('Failed to add source:', error);
+      console.error('[ERROR] useSources.ADD_EXCEPTION:', error);
+    }
+  }, []);
+
+  const stopSource = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/sources/${id}/stop`, { method: 'POST' });
+      await fetchAndUpdate();
+    } catch (error: unknown) {
+      console.error('Failed to stop source:', error);
     }
   }, []);
 
@@ -111,5 +128,5 @@ export function useSources(): UseSources {
     }
   }, []);
 
-  return { sources, isPolling, addSource, removeSource, refreshSource };
+  return { sources, isPolling, addSource, stopSource, removeSource, refreshSource };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type RefCallback } from 'react';
+import { useState, useEffect, useRef, type RefCallback } from 'react';
 import type { Source } from '@/lib/worktree-manager';
 
 interface IframePanelProps {
@@ -8,6 +8,70 @@ interface IframePanelProps {
   onRefresh?: () => void;
   currentPath?: string;
   iframeRef?: RefCallback<HTMLIFrameElement>;
+}
+
+function BuildingView({ source }: { source: Source }) {
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function poll(): Promise<void> {
+      try {
+        const res = await fetch(`/api/sources/${source.id}/logs`);
+        if (res.ok && active) {
+          const data = (await res.json()) as { logs: string };
+          if (data.logs) {
+            setLogLines(data.logs.split('\n'));
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }
+
+    void poll();
+    const interval = setInterval(() => void poll(), 2000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [source.id]);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logLines]);
+
+  return (
+    <div className="flex h-full flex-col rounded-lg border border-neutral-700 bg-neutral-900/50">
+      <div className="flex items-center gap-3 border-b border-neutral-700 px-4 py-2">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-yellow-400" />
+        <p className="text-sm text-neutral-300">
+          Building <span className="font-medium text-white">{source.branch}</span>
+          {source.mode === 'dev' && <span className="ml-1 text-blue-400">(dev)</span>}
+        </p>
+      </div>
+      <div className="flex-1 overflow-auto bg-neutral-950 p-3">
+        {logLines.length === 0 ? (
+          <p className="text-xs text-neutral-500">Waiting for output...</p>
+        ) : (
+          <pre className="font-mono text-xs text-neutral-400">
+            {logLines.slice(-100).map((line, i) => (
+              <div
+                key={i}
+                className={line.includes('ERR') || line.includes('error') ? 'text-red-400' : ''}
+              >
+                {line}
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </pre>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function IframePanel({
@@ -31,14 +95,7 @@ export default function IframePanel({
   }
 
   if (source.status === 'building') {
-    return (
-      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900/50">
-        <div className="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-neutral-600 border-t-yellow-400" />
-        <p className="text-sm text-neutral-300">
-          Building <span className="font-medium text-white">{source.branch}</span>...
-        </p>
-      </div>
-    );
+    return <BuildingView source={source} />;
   }
 
   if (source.status === 'error') {

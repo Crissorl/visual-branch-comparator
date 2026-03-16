@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getSource } from '@/lib/worktree-manager';
+import { getTargetRepo } from '@/lib/target-repo';
 
 export async function GET(
   _request: NextRequest,
@@ -14,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Source not found' }, { status: 404 });
   }
 
-  const logPath = path.join(process.cwd(), '.comparator', 'logs', `${id}.log`);
+  const logPath = path.join(getTargetRepo(), '.comparator', 'logs', `${id}.log`);
 
   try {
     const logs = await readFile(logPath, 'utf-8');

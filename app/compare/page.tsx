@@ -13,7 +13,7 @@ import DiffOverlay from '@/components/DiffOverlay';
 import ChangePanel from '@/components/ChangePanel';
 
 export default function ComparePage() {
-  const { sources, addSource, removeSource, refreshSource } = useSources();
+  const { sources, addSource, stopSource, removeSource, refreshSource } = useSources();
   const [showLogFor, setShowLogFor] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
   const [showChanges, setShowChanges] = useState(false);
@@ -78,7 +78,7 @@ export default function ComparePage() {
         <SourceSelector
           label="Source A"
           source={sourceA}
-          onSelect={(branch, commit) => void addSource(branch, commit)}
+          onSelect={(branch, commit, mode) => void addSource(branch, commit, mode)}
           onRemove={() => {
             if (sourceA) void removeSource(sourceA.id);
           }}
@@ -86,7 +86,7 @@ export default function ComparePage() {
         <SourceSelector
           label="Source B"
           source={sourceB}
-          onSelect={(branch, commit) => void addSource(branch, commit)}
+          onSelect={(branch, commit, mode) => void addSource(branch, commit, mode)}
           onRemove={() => {
             if (sourceB) void removeSource(sourceB.id);
           }}
@@ -111,6 +111,8 @@ export default function ComparePage() {
       <StatusBar
         sources={sources}
         onRefresh={(id) => void refreshSource(id)}
+        onStop={(id) => void stopSource(id)}
+        onRemove={(id) => void removeSource(id)}
         onShowLog={(id) => setShowLogFor(id)}
       />
 

@@ -12,6 +12,7 @@ interface FrameworkConfig {
   install: string;
   build: string;
   start: string;
+  dev: string;
   healthCheckPath: string;
   env: Record<string, string>;
 }
@@ -21,6 +22,7 @@ const DEFAULT_CONFIG: FrameworkConfig = {
   install: 'pnpm install',
   build: 'pnpm build',
   start: 'pnpm start',
+  dev: 'pnpm dev',
   healthCheckPath: '/',
   env: { NEXT_TELEMETRY_DISABLED: '1' },
 };
@@ -42,18 +44,25 @@ function enqueueBuild(fn: () => Promise<void>): void {
   buildChain = buildChain.catch(() => {}).then(fn);
 }
 
+interface SpawnResult {
+  exitCode: number;
+  pid: number | undefined;
+}
+
 function spawnCommand(
   cmd: string,
   cwd: string,
   env: Record<string, string>,
   logLines: string[],
-): Promise<number> {
+): Promise<SpawnResult> {
   return new Promise((resolve) => {
     const child = spawn('sh', ['-c', cmd], {
       cwd,
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+
+    const pid = child.pid;
 
     const collectLine = (line: string): void => {
       logLines.push(line);
@@ -75,7 +84,7 @@ function spawnCommand(
     });
 
     child.on('close', (code) => {
-      resolve(code ?? 1);
+      resolve({ exitCode: code ?? 1, pid });
     });
   });
 }
@@ -86,6 +95,42 @@ async function writeLog(sourceId: string, lines: string[]): Promise<void> {
   await writeFile(logPath, lines.join('\n'), 'utf-8');
 }
 
+function createLogFlusher(
+  sourceId: string,
+  logLines: string[],
+): { flush: () => void; stop: () => void } {
+  let dirty = false;
+  const markDirty = (): void => {
+    dirty = true;
+  };
+
+  // Monkey-patch push to track changes
+  const origPush = logLines.push.bind(logLines);
+  logLines.push = (...items: string[]) => {
+    markDirty();
+    return origPush(...items);
+  };
+
+  const interval = setInterval(() => {
+    if (dirty) {
+      dirty = false;
+      void writeLog(sourceId, logLines);
+    }
+  }, 1000);
+
+  return {
+    flush: () => {
+      void writeLog(sourceId, logLines);
+    },
+    stop: () => {
+      clearInterval(interval);
+    },
+  };
+}
+
+// Track intentional stops so exit listener doesn't flag them as errors
+const intentionallyStopped = new Set<string>();
+
 async function updateSourceState(sourceId: string, updates: Partial<Source>): Promise<void> {
   const state = await readState();
   if (state[sourceId]) {
@@ -95,14 +140,31 @@ async function updateSourceState(sourceId: string, updates: Partial<Source>): Pr
 }
 
 export async function startServer(source: Source): Promise<void> {
+  console.log(
+    '[SERVER] startServer CALLED: id=%s, branch=%s, mode=%s, status=%s',
+    source.id,
+    source.branch,
+    source.mode,
+    source.status,
+  );
   // Skip if already building
-  if (source.status === 'building') return;
+  if (source.status === 'building') {
+    console.log('[SERVER] startServer SKIPPED: already building');
+    return;
+  }
 
   const config = await loadConfig();
+  console.log(
+    '[SERVER] startServer CONFIG: dev=%s, build=%s, start=%s',
+    config.dev,
+    config.build,
+    config.start,
+  );
   await updateSourceState(source.id, { status: 'building' });
 
   enqueueBuild(async () => {
     const logLines: string[] = [];
+    const logFlusher = createLogFlusher(source.id, logLines);
     const env = { ...config.env };
     let serverProcess: ChildProcess | undefined;
 
@@ -132,36 +194,52 @@ export async function startServer(source: Source): Promise<void> {
       }
 
       // Install dependencies
-      const installCode = await spawnCommand(config.install, source.worktreePath, env, logLines);
-      if (installCode !== 0) {
+      const installResult = await spawnCommand(config.install, source.worktreePath, env, logLines);
+      if (installResult.pid) {
+        await updateSourceState(source.id, { pid: installResult.pid });
+      }
+      if (installResult.exitCode !== 0) {
         const errorLines = logLines.slice(-50).join('\n');
         await updateSourceState(source.id, {
           status: 'error',
           buildError: errorLines,
+          pid: undefined,
         });
         await writeLog(source.id, logLines);
         return;
       }
 
-      // Build
-      const buildCode = await spawnCommand(config.build, source.worktreePath, env, logLines);
-      if (buildCode !== 0) {
-        const errorLines = logLines.slice(-50).join('\n');
-        await updateSourceState(source.id, {
-          status: 'error',
-          buildError: errorLines,
+      if (source.mode === 'dev') {
+        // Dev mode: skip build, start dev server directly
+        serverProcess = spawn('sh', ['-c', config.dev], {
+          cwd: source.worktreePath,
+          env: { ...process.env, ...env, PORT: String(source.port) },
+          stdio: ['ignore', 'pipe', 'pipe'],
         });
-        await writeLog(source.id, logLines);
-        return;
-      }
+      } else {
+        // Build mode: build then start
+        const buildResult = await spawnCommand(config.build, source.worktreePath, env, logLines);
+        if (buildResult.pid) {
+          await updateSourceState(source.id, { pid: buildResult.pid });
+        }
+        if (buildResult.exitCode !== 0) {
+          const errorLines = logLines.slice(-50).join('\n');
+          await updateSourceState(source.id, {
+            status: 'error',
+            buildError: errorLines,
+            pid: undefined,
+          });
+          await writeLog(source.id, logLines);
+          return;
+        }
 
-      // Start server (long-running)
-      serverProcess = spawn('sh', ['-c', config.start], {
-        cwd: source.worktreePath,
-        env: { ...process.env, ...env, PORT: String(source.port) },
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: true,
-      });
+        // Start production server
+        serverProcess = spawn('sh', ['-c', config.start], {
+          cwd: source.worktreePath,
+          env: { ...process.env, ...env, PORT: String(source.port) },
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+      }
 
       serverProcess.stdout?.on('data', (data: Buffer) => {
         for (const line of data.toString().split('\n')) {
@@ -181,7 +259,18 @@ export async function startServer(source: Source): Promise<void> {
         }
       });
 
-      serverProcess.unref();
+      // Detect unexpected server death
+      serverProcess.on('exit', (code, signal) => {
+        if (intentionallyStopped.has(source.id)) {
+          intentionallyStopped.delete(source.id);
+          return;
+        }
+        void updateSourceState(source.id, {
+          status: 'error',
+          buildError: `Server exited unexpectedly (code=${code}, signal=${signal})`,
+          pid: undefined,
+        });
+      });
 
       const pid = serverProcess.pid;
       if (pid) {
@@ -228,7 +317,8 @@ export async function startServer(source: Source): Promise<void> {
       });
     }
 
-    await writeLog(source.id, logLines);
+    logFlusher.stop();
+    logFlusher.flush();
   });
 }
 
@@ -267,6 +357,8 @@ export async function stopAllServers(): Promise<void> {
 }
 
 export async function stopServer(source: Source): Promise<void> {
+  intentionallyStopped.add(source.id);
+
   if (source.pid) {
     try {
       process.kill(source.pid, 'SIGTERM');

@@ -14,7 +14,7 @@ export async function POST(
   }
 
   await removeSource(id);
-  const source = await addSource(existing.branch, existing.commit);
+  const source = await addSource(existing.branch, existing.commit, existing.mode ?? 'build');
   void startServer(source);
   return NextResponse.json(source);
 }

@@ -9,7 +9,7 @@ import StatusBadge from '@/components/StatusBadge';
 interface SourceSelectorProps {
   label: string;
   source: Source | null;
-  onSelect: (branch: string, commit?: string) => void;
+  onSelect: (branch: string, commit?: string, mode?: 'build' | 'dev') => void;
   onRemove: () => void;
 }
 
@@ -19,6 +19,7 @@ export default function SourceSelector({ label, source, onSelect, onRemove }: So
   const { branches, isLoading } = useBranches();
   const [view, setView] = useState<View>('closed');
   const [search, setSearch] = useState('');
+  const [mode, setMode] = useState<'build' | 'dev'>('dev');
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [loadingCommits, setLoadingCommits] = useState(false);
@@ -51,20 +52,31 @@ export default function SourceSelector({ label, source, onSelect, onRemove }: So
   }
 
   function handleLatestClick(): void {
+    console.log('[ACTION] SourceSelector.LATEST_CLICK: branch=%s, mode=%s', selectedBranch, mode);
     if (selectedBranch) {
-      onSelect(selectedBranch);
+      onSelect(selectedBranch, undefined, mode);
       setView('closed');
       setSearch('');
       setSelectedBranch(null);
+    } else {
+      console.warn('[ACTION] SourceSelector.LATEST_CLICK: SKIPPED — no selectedBranch');
     }
   }
 
   function handleCommitClick(commit: CommitInfo): void {
+    console.log(
+      '[ACTION] SourceSelector.COMMIT_CLICK: branch=%s, hash=%s, mode=%s',
+      selectedBranch,
+      commit.hash,
+      mode,
+    );
     if (selectedBranch) {
-      onSelect(selectedBranch, commit.hash);
+      onSelect(selectedBranch, commit.hash, mode);
       setView('closed');
       setSearch('');
       setSelectedBranch(null);
+    } else {
+      console.warn('[ACTION] SourceSelector.COMMIT_CLICK: SKIPPED — no selectedBranch');
     }
   }
 
@@ -157,6 +169,27 @@ export default function SourceSelector({ label, source, onSelect, onRemove }: So
               ← Back
             </button>
             <span className="text-sm font-medium text-white">{selectedBranch}</span>
+          </div>
+          <div className="flex items-center gap-2 border-b border-neutral-700 px-4 py-2">
+            <span className="text-xs text-neutral-400">Mode:</span>
+            <div className="flex rounded bg-neutral-900">
+              <button
+                onClick={() => setMode('dev')}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  mode === 'dev' ? 'bg-blue-600 text-white' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Dev
+              </button>
+              <button
+                onClick={() => setMode('build')}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  mode === 'build' ? 'bg-blue-600 text-white' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Build
+              </button>
+            </div>
           </div>
           <ul className="max-h-72 overflow-y-auto">
             <li>
