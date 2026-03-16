@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { capture } from '@/lib/screenshot-engine';
 import { compare } from '@/lib/diff-engine';
 import { readState } from '@/lib/state-store';
+import { getTargetRepo } from '@/lib/target-repo';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Capture screenshots
     const timestamp = Date.now();
-    const screenshotDir = join(process.cwd(), '.comparator', 'screenshots');
+    const screenshotDir = join(getTargetRepo(), '.comparator', 'screenshots');
     const pathA = join(screenshotDir, `${sourceAId}-diff-${timestamp}.png`);
     const pathB = join(screenshotDir, `${sourceBId}-diff-${timestamp}.png`);
 

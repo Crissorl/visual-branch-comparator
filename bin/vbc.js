@@ -7,7 +7,7 @@ const { spawn, exec } = require('child_process');
 const args = process.argv.slice(2);
 
 if (args.includes('--help') || args.includes('-h')) {
-  console.log(`
+  process.stdout.write(`
 Usage: vbc [options]
 
 Options:
@@ -17,7 +17,7 @@ Options:
 
 Visual Branch Comparator — compare how your app looks across git branches.
 Run from the root of a git repository.
-`);
+\n`);
   process.exit(0);
 }
 
@@ -46,7 +46,7 @@ const shouldOpen = !args.includes('--no-open');
 // Resolve the package dir (where this script lives, one level up from bin/)
 const packageDir = path.resolve(__dirname, '..');
 
-console.log(`Starting Visual Branch Comparator on port ${port}...`);
+process.stdout.write(`Starting Visual Branch Comparator on port ${port}...\n`);
 
 /**
  * Poll for server availability and open browser when ready
@@ -85,7 +85,7 @@ function openBrowser(url) {
   const cmd = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
   exec(`${cmd} ${url}`, (error) => {
     if (error && error.code !== 0) {
-      console.warn(`Could not automatically open browser: ${error.message}`);
+      process.stderr.write(`Could not automatically open browser: ${error.message}\n`);
     }
   });
 }
@@ -93,7 +93,7 @@ function openBrowser(url) {
 const child = spawn('node', ['node_modules/.bin/next', 'start', '-p', String(port)], {
   cwd: packageDir,
   stdio: 'inherit',
-  env: { ...process.env },
+  env: { ...process.env, VBC_TARGET_REPO: cwd },
 });
 
 child.on('error', (err) => {
@@ -105,11 +105,11 @@ child.on('error', (err) => {
 if (shouldOpen) {
   waitForServer(port).then((success) => {
     if (success) {
-      console.log(`\nOpening browser at http://localhost:${port}...`);
+      process.stdout.write(`\nOpening browser at http://localhost:${port}...\n`);
       openBrowser(`http://localhost:${port}`);
     } else {
-      console.warn(
-        `\nServer did not respond after 30 seconds. Open http://localhost:${port} manually.`,
+      process.stderr.write(
+        `\nServer did not respond after 30 seconds. Open http://localhost:${port} manually.\n`,
       );
     }
   });

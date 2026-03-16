@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
+import { getTargetRepo } from './target-repo';
 
 export interface DiffResult {
   diffImagePath: string;
@@ -18,7 +19,7 @@ export async function compare(
   options?: { threshold?: number; outputDir?: string },
 ): Promise<DiffResult> {
   const threshold = options?.threshold ?? 0.1;
-  const outputDir = options?.outputDir ?? join(process.cwd(), '.comparator', 'diffs');
+  const outputDir = options?.outputDir ?? join(getTargetRepo(), '.comparator', 'diffs');
 
   // Read images
   const imgA = PNG.sync.read(readFileSync(imageAPath));

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'node:path';
 import { capture } from '@/lib/screenshot-engine';
 import { readState } from '@/lib/state-store';
+import { getTargetRepo } from '@/lib/target-repo';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const timestamp = Date.now();
     const outputPath = join(
-      process.cwd(),
+      getTargetRepo(),
       '.comparator',
       'screenshots',
       `${sourceId}-${timestamp}.png`,

@@ -5,6 +5,7 @@ import simpleGit from 'simple-git';
 import { readState, writeState, ensureComparatorDir } from './state-store';
 import { findFreePort } from './port-utils';
 import { WorktreeError } from './worktree-errors';
+import { getTargetRepo } from './target-repo';
 
 export interface Source {
   id: string;
@@ -23,7 +24,7 @@ function sanitizeBranchName(branch: string): string {
 }
 
 export async function addSource(branch: string, commit?: string): Promise<Source> {
-  const git = simpleGit();
+  const git = simpleGit(getTargetRepo());
   const branches = await git.branch();
 
   const branchExists =
@@ -45,7 +46,7 @@ export async function addSource(branch: string, commit?: string): Promise<Source
   const id = 'src_' + crypto.randomUUID().slice(0, 8);
   const port = await findFreePort(branch);
   const worktreePath = path.join(
-    process.cwd(),
+    getTargetRepo(),
     '.comparator',
     'worktrees',
     sanitizeBranchName(branch),
@@ -102,7 +103,7 @@ export async function removeSource(id: string): Promise<void> {
   }
 
   try {
-    const git = simpleGit();
+    const git = simpleGit(getTargetRepo());
     await git.raw('worktree', 'remove', '--force', source.worktreePath);
   } catch {
     /* worktree might already be gone */

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import type { Source } from './worktree-manager';
 import { WorktreeError } from './worktree-errors';
+import { getTargetRepo } from './target-repo';
 
 const COMPARATOR_DIR = '.comparator';
 const STATE_FILE = 'state.json';
@@ -9,7 +10,7 @@ const STATE_FILE = 'state.json';
 let cache: Record<string, Source> | null = null;
 
 export async function ensureComparatorDir(): Promise<void> {
-  const base = path.join(process.cwd(), COMPARATOR_DIR);
+  const base = path.join(getTargetRepo(), COMPARATOR_DIR);
   await mkdir(path.join(base, 'worktrees'), { recursive: true });
   await mkdir(path.join(base, 'logs'), { recursive: true });
 }
@@ -17,7 +18,7 @@ export async function ensureComparatorDir(): Promise<void> {
 export async function readState(): Promise<Record<string, Source>> {
   if (cache !== null) return cache;
 
-  const filePath = path.join(process.cwd(), COMPARATOR_DIR, STATE_FILE);
+  const filePath = path.join(getTargetRepo(), COMPARATOR_DIR, STATE_FILE);
   try {
     const data = await readFile(filePath, 'utf-8');
     const parsed: unknown = JSON.parse(data);
@@ -39,7 +40,7 @@ export async function readState(): Promise<Record<string, Source>> {
 
 export async function writeState(state: Record<string, Source>): Promise<void> {
   await ensureComparatorDir();
-  const filePath = path.join(process.cwd(), COMPARATOR_DIR, STATE_FILE);
+  const filePath = path.join(getTargetRepo(), COMPARATOR_DIR, STATE_FILE);
   const tmpPath = filePath + '.tmp';
   await writeFile(tmpPath, JSON.stringify(state, null, 2), 'utf-8');
   await rename(tmpPath, filePath);

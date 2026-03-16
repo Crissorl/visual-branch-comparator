@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { Source } from './worktree-manager';
 import { readState, writeState, ensureComparatorDir } from './state-store';
 import { patchIframeHeaders } from './config-patcher';
+import { getTargetRepo } from './target-repo';
 
 interface FrameworkConfig {
   name: string;
@@ -26,7 +27,7 @@ const DEFAULT_CONFIG: FrameworkConfig = {
 
 async function loadConfig(): Promise<FrameworkConfig> {
   try {
-    const raw = await readFile(path.join(process.cwd(), 'comparator.config.json'), 'utf-8');
+    const raw = await readFile(path.join(getTargetRepo(), 'comparator.config.json'), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<FrameworkConfig>;
     return { ...DEFAULT_CONFIG, ...parsed };
   } catch {
@@ -81,7 +82,7 @@ function spawnCommand(
 
 async function writeLog(sourceId: string, lines: string[]): Promise<void> {
   await ensureComparatorDir();
-  const logPath = path.join(process.cwd(), '.comparator', 'logs', `${sourceId}.log`);
+  const logPath = path.join(getTargetRepo(), '.comparator', 'logs', `${sourceId}.log`);
   await writeFile(logPath, lines.join('\n'), 'utf-8');
 }
 
@@ -110,9 +111,8 @@ export async function startServer(source: Source): Promise<void> {
       try {
         patchIframeHeaders(source.worktreePath);
       } catch (patchError: unknown) {
-        console.warn(
-          'VBC: Failed to patch next.config:',
-          patchError instanceof Error ? patchError.message : patchError,
+        logLines.push(
+          `VBC: Failed to patch next.config: ${patchError instanceof Error ? patchError.message : String(patchError)}`,
         );
       }
 
